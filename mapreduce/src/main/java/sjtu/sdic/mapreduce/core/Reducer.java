@@ -8,10 +8,8 @@ import sjtu.sdic.mapreduce.common.Utils;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
+
 import com.alibaba.fastjson.JSON;
 
 /**
@@ -61,6 +59,7 @@ public class Reducer {
         List<KeyValue> kvs = new ArrayList<>();
         for (int i = 0; i < nMap; i++) {
             String fileName = Utils.reduceName(jobName, i, reduceTask);
+            //System.out.println("ReduceName: " + fileName);
             String content = null;
             try {
                 File file = new File(fileName);
@@ -73,8 +72,14 @@ public class Reducer {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            KeyValue kv = JSON.parseObject(content, KeyValue.class);
-            kvs.add(kv);
+            List<String> strs = Arrays.asList(content.split("\n"));
+            for (int j = 0; j < strs.size(); j++) {
+                //System.out.println(strs.size());
+//                System.out.println("AM i mad?");
+                KeyValue kv = JSON.parseObject(strs.get(j), KeyValue.class);
+                //System.out.println(kv);
+                kvs.add(kv);
+            }
         }
 
         kvs.sort((a,b) -> (a.key.compareTo(b.key)));
@@ -91,32 +96,27 @@ public class Reducer {
 
         String mergeFileName = Utils.mergeName(jobName, reduceTask);
         File mergeFile = new File(mergeFileName);
+        //System.out.println("MergeFileName: " + mergeFile);
         FileWriter writer = null;
         try {
             if (!mergeFile.exists()) {
                 mergeFile.createNewFile();
-                writer = new FileWriter(mergeFile, true);
             }
+            writer = new FileWriter(mergeFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-
-        for (int i = 0; i < kvs.size(); i++) {
-            List<String> listV = kvsMap.get(kvs.get(i).key);
+        Map<String, Object> resMap = new TreeMap<>();
+        for (String key : kvsMap.keySet()) {
+            List<String> listV = kvsMap.get(key);
             String[] values = listV.toArray(new String[listV.size()]);
-            String res = reduceF.reduce(kvs.get(i).key, values);
-
-            String jsonString = JSON.toJSONString(new KeyValue(kvs.get(i).key, res));
-
-            try {
-                writer.append(jsonString);
-                writer.flush();
-            } catch(IOException e) {
-                e.printStackTrace();
-            }
+            String res = reduceF.reduce(key, values);
+            resMap.put(key, res);
         }
         try {
+            JSONObject json = new JSONObject(resMap);
+            writer.append(json.toString());
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();

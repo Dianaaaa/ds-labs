@@ -92,32 +92,39 @@ public class Mapper {
             e.printStackTrace();
         }
         String content =new String(bytes, StandardCharsets.UTF_8);
-
         List<KeyValue> keyValueList = mapF.map(inFile, content);
 
         for (int i = 0; i < nReduce; i++) {
             String fileName = Utils.reduceName(jobName, mapTask, i);
+            //System.out.println("doMap: Reduce file name: " + fileName);
             File reduceFile = new File(fileName);
+            FileWriter writer = null;
             try {
-                if (!reduceFile.exists()) {
+                if (!reduceFile.exists()){
                     reduceFile.createNewFile();
                 }
+                writer = new FileWriter(reduceFile);
             } catch (IOException e) {
                 e.printStackTrace();
             }
             for (int j = 0; j < keyValueList.size(); j++) {
                 if (hashCode(keyValueList.get(j).key) % nReduce == i) {
                     String jsonString = JSON.toJSONString(keyValueList.get(j));
-                    FileWriter writer = null;
                     try {
-                        writer = new FileWriter(reduceFile);
                         writer.append(jsonString);
+                        if (j != keyValueList.size()) {
+                            writer.append("\n");
+                        }
                         writer.flush();
-                        writer.close();
                     } catch(IOException e) {
                         e.printStackTrace();
                     }
                 }
+            }
+            try {
+                writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
 
         }
