@@ -58,31 +58,27 @@ public class Scheduler {
         //
         */
         CountDownLatch count = new CountDownLatch(nTasks);
-        ExecutorService executorService = Executors.newFixedThreadPool(nTasks);
         for (int i = 0; i < nTasks; i++) {
             DoTaskArgs args = new DoTaskArgs(jobName, mapFiles[i], phase, i, nOther);
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        String woker = registerChan.read();
-                        Boolean flag = Boolean.TRUE;
-                        do {
-                            try {
-                                Call.getWorkerRpcService(woker).doTask(args);
-                                flag = Boolean.TRUE;
-                            } catch (SofaRpcException e) {
-                                registerChan.write(woker);
-                                woker = registerChan.read();
-                                flag = Boolean.FALSE;
-                            }
-                        } while (!flag);
-                        //System.out.println("A child thread ends");
-                        registerChan.write(woker);
-                        count.countDown();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+            new Thread(() -> {
+                try {
+                    String woker = registerChan.read();
+                    Boolean flag = Boolean.TRUE;
+                    do {
+                        try {
+                            Call.getWorkerRpcService(woker).doTask(args);
+                            flag = Boolean.TRUE;
+                        } catch (SofaRpcException e) {
+                            registerChan.write(woker);
+                            woker = registerChan.read();
+                            flag = Boolean.FALSE;
+                        }
+                    } while (!flag);
+                    //System.out.println("A child thread ends");
+                    registerChan.write(woker);
+                    count.countDown();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }).start();
         }
