@@ -1,5 +1,6 @@
 package sjtu.sdic.mapreduce.core;
 
+import com.alipay.sofa.rpc.core.exception.SofaRpcException;
 import sjtu.sdic.mapreduce.common.Channel;
 import sjtu.sdic.mapreduce.common.DoTaskArgs;
 import sjtu.sdic.mapreduce.common.JobPhase;
@@ -65,9 +66,19 @@ public class Scheduler {
                 public void run() {
                     try {
                         String woker = registerChan.read();
-                        Call.getWorkerRpcService(woker).doTask(args);
-                        registerChan.write(woker);
+                        Boolean flag = Boolean.TRUE;
+                        do {
+                            try {
+                                Call.getWorkerRpcService(woker).doTask(args);
+                                flag = Boolean.TRUE;
+                            } catch (SofaRpcException e) {
+                                registerChan.write(woker);
+                                woker = registerChan.read();
+                                flag = Boolean.FALSE;
+                            }
+                        } while (!flag);
                         //System.out.println("A child thread ends");
+                        registerChan.write(woker);
                         count.countDown();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
