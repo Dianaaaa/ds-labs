@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by Cachhe on 2019/4/22.
@@ -54,7 +56,39 @@ public class Scheduler {
         // Your code here (Part III, Part IV).
         //
         */
+        CountDownLatch count = new CountDownLatch(nTasks);
+        ExecutorService executorService = Executors.newFixedThreadPool(nTasks);
+        for (int i = 0; i < nTasks; i++) {
+            DoTaskArgs args = new DoTaskArgs(jobName, mapFiles[i], phase, i, nOther);
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        String woker = registerChan.read();
+                        Call.getWorkerRpcService(woker).doTask(args);
+                        registerChan.write(woker);
+                        //System.out.println("A child thread ends");
+                        count.countDown();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
+        }
+
+        try {
+            count.await();
+            //System.out.println("All child thread end");
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
 
         System.out.println(String.format("Schedule: %s done", phase));
+    }
+
+    private static void threadTask(String jobName, String[] mapFiles, int i, JobPhase phase, int nOther, CountDownLatch count) {
+
     }
 }
