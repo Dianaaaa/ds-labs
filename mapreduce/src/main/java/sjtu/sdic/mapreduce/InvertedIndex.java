@@ -17,12 +17,45 @@ public class InvertedIndex {
 
     public static List<KeyValue> mapFunc(String file, String value) {
         // Your code here (Part V)
-        return null;
+        List<KeyValue> res = new ArrayList<>();
+        String regex = "[a-zA-Z0-9]+";
+        Pattern p = Pattern.compile(regex);
+        Matcher  ma = p.matcher(value);
+        List<String> words = new ArrayList<>();
+        while (ma.find()) {
+            //String word = ma.group().toLowerCase();
+            String word = ma.group();
+            //System.out.println(word);
+            words.add(word);
+        }
+        for (int i = 0; i < words.size(); i++) {
+            KeyValue kv = new KeyValue(words.get(i), file);
+            res.add(kv);
+        }
+        return res;
     }
 
     public static String reduceFunc(String key, String[] values) {
         //  Your code here (Part V)
-        return null;
+        Set<String> fileSet = new TreeSet<>();
+        for (String v : values) {
+            if (!fileSet.contains(v)) {
+                fileSet.add(v);
+            }
+        }
+        int nFiles = fileSet.size();
+        String res = nFiles + " ";
+        List<String> fileList = new ArrayList<>(fileSet);
+        Collections.sort(fileList);
+        for (int i = 0; i < fileList.size(); i++) {
+            if (i != fileList.size()-1) {
+                res += fileList.get(i) + ",";
+            } else {
+                res += fileList.get(i);
+            }
+        }
+
+        return res;
     }
 
     public static void main(String[] args) {
